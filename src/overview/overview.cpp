@@ -397,7 +397,13 @@ namespace umbriel {
     bool blurUpdated = false;
     for (const auto& entry : card.surfaces) {
       wlr_surface* surface = entry->surface;
-      if (entry->buffer == nullptr || surface->current.width <= 0 || surface->current.height <= 0) {
+      if (entry->buffer == nullptr) {
+        continue;
+      }
+      // An unmapped subsurface (Firefox hides a compositor layer with a null buffer) drops out of the commit walk.
+      // Skipping it would leave its mirror showing the last frame at the zoom it was last laid out at.
+      if (!surface->mapped || surface->current.width <= 0 || surface->current.height <= 0) {
+        wlr_scene_node_set_enabled(&entry->buffer->node, false);
         continue;
       }
       const float surfaceOpacity =
