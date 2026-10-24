@@ -400,7 +400,7 @@ namespace umbriel {
       if (entry->buffer == nullptr) {
         continue;
       }
-      // Firefox retires a compositor layer with a null buffer, then destroys its subsurface role. Either drops the
+      // A client retires a subsurface with a null buffer, or by destroying its subsurface role. Either drops the
       // surface out of the commit walk; skipping its mirror would leave the last frame at the zoom it was laid out at.
       // A destroyed role emits no commit, so `mapped` catches it before the next walk does.
       if (!entry->inTree || !surface->mapped || surface->current.width <= 0 || surface->current.height <= 0) {

@@ -8,11 +8,10 @@
 // main surface is inset and its corners are interior to the window; the child then sits below the parent.
 // STALE_GEOMETRY declares the window geometry once, at the first size, while still redrawing both buffers at every
 // configured size. FIXED_SIZE pins the toplevel's minimum and maximum size to the fallback dimensions, like the size
-// hints Wine gives an X11 game window. CHILD_ON_STDIN reads commands: `h` attaches a null buffer to the child, the way
-// Firefox hides a compositor layer, `d` also destroys its subsurface role while the surface lives on, and `s` maps it
-// again, as a subsurface of the parent once more after `d`. `p` maps an empty green popup of the window, and after `d`,
-// `m` makes the child a subsurface of that popup instead. Each prints child-hidden, child-detached, child-shown,
-// popup-mapped or child-moved once applied.
+// hints Wine gives an X11 game window. CHILD_ON_STDIN reads commands: `h` attaches a null buffer to the child, `d` also
+// destroys its subsurface role while the surface lives on, and `s` maps it again, as a subsurface of the parent once
+// more after `d`. `p` maps an empty green popup of the window, and after `d`, `m` makes the child a subsurface of that
+// popup instead. Each prints child-hidden, child-detached, child-shown, popup-mapped or child-moved once applied.
 // Usage: subsurface-client [title [width height [animate]]]. The dimensions are a fallback: a configure adopts it.
 
 #include "xdg-shell-client-protocol.h"
@@ -440,7 +439,7 @@ int main(int argc, char** argv) {
       wl_surface_attach(state.child, nullptr, 0, 0);
       wl_surface_commit(state.child);
       if (command == 'd') {
-        // Firefox retires a compositor layer this way: the surface outlives its subsurface role.
+        // The surface outlives its subsurface role.
         wl_subsurface_destroy(state.subsurface);
         state.subsurface = nullptr;
       }

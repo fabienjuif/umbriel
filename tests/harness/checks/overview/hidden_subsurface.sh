@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# A card mirrors each surface of its window. Firefox hides a compositor layer by attaching a null buffer to its
-# subsurface, which drops the surface out of the commit walk that refreshes those mirrors. The card must hide that
-# mirror: left alone it kept the last frame at the zoom it was last laid out at, so a layer hidden during the opening
-# zoom stayed on screen larger than the card, anchored at the card's corner. The client's parent is red under a blue
-# child that covers it, so blue on screen is the child's mirror. The last two steps also guard reads of a scene node
-# freed with a destroyed subsurface role, which only `just mode=asan check` reports.
+# A card mirrors each surface of its window. A client can hide a subsurface by attaching a null buffer to it, which
+# drops the surface out of the commit walk that refreshes those mirrors. The card must hide that mirror: left alone it
+# kept the last frame at the zoom it was last laid out at, so a layer hidden during the opening zoom stayed on screen
+# larger than the card, anchored at the card's corner. The client's parent is red under a blue child that covers it, so
+# blue on screen is the child's mirror. The last two steps also guard reads of a scene node freed with a destroyed
+# subsurface role, which only `just mode=asan check` reports.
 set -euo pipefail
 source "$UMBRIEL_HARNESS_LIB"
 
@@ -105,7 +105,7 @@ if ((w > 0)); then
   exit 1
 fi
 
-# Firefox retires a layer by also destroying its subsurface role while the surface lives on. That frees the scene node
+# A client can also retire a subsurface by destroying its role while the surface lives on. That frees the scene node
 # the mirror was copied from, so taking the same surface back as a subsurface must mirror it from its new node.
 child s child-shown 2
 "$UMBRIEL" settle > /dev/null
