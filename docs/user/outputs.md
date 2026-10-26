@@ -48,7 +48,7 @@ Umbriel first uses the first remaining enabled output in its internal output ord
 | `min_workspaces`                           | int                               | `1`          | Minimum count for a dynamic output.                                                                  |
 | `cyclic_workspaces`                        | bool                              | `false`      | Wrap a workspace step around the ends of the inventory.                                              |
 | `workspace_axis`                           | string                            | `"vertical"` | Workspace arrangement axis.                                                                          |
-| `layout.scrolling.default_extent_fraction` | float                             | inherited    | Initial scrolling-column extent on this output.                                                      |
+| `layout.scrolling.default_extent_fraction` | float                             | inherited    | Initial scrolling-column extent on this output, 0.1 to 4.0.                                          |
 | `screen_effect`                            | string                            | inherited    | Replace `effects.screen` with a screen preset or pool, or `"off"` to disable it on this output.      |
 | `screen_cast_effect`                       | string                            | inherited    | Replace `effects.screen_cast` with a screen preset or pool, or `"off"` to disable it on this output. |
 

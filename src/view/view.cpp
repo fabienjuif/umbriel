@@ -251,6 +251,9 @@ namespace umbriel {
       wl_signal_add(&m_xsurface->events.set_hints, &m_xSetHints);
       m_setDecorations.notify = onSetDecorations;
       wl_signal_add(&m_xsurface->events.set_decorations, &m_setDecorations);
+      m_xShapeChanged.notify = onXwaylandShapeChanged;
+      wl_signal_add(m_server->xwayland()->shapeChanged(), &m_xShapeChanged);
+      syncXwaylandShape();
     }
 
     if (wlr_foreign_toplevel_manager_v1* manager = m_server->foreignToplevelManager()) {
@@ -319,7 +322,7 @@ namespace umbriel {
     for (wl_listener* listener :
          {&m_map, &m_unmap, &m_commit, &m_destroy, &m_requestMove, &m_requestResize, &m_requestMaximize,
           &m_requestMinimize, &m_requestFullscreen, &m_setParent, &m_setTitle, &m_setAppId, &m_xRequestConfigure,
-          &m_xRequestActivate, &m_xSetHints, &m_setDecorations}) {
+          &m_xRequestActivate, &m_xSetHints, &m_xShapeChanged, &m_setDecorations}) {
       removeListener(*listener);
     }
     if (m_rootSurfaceDestroy.link.next != nullptr) {
@@ -822,7 +825,7 @@ namespace umbriel {
                                    : static_cast<int>(std::lround(m_posY.target()));
   }
 
-  void View::applySeatFocus(bool withKeyboard) {
+  void View::applySeatFocus(bool withKeyboard, bool raise) {
     // Mechanism only. Policy lives in Server::focusView; do not call directly
     // from input/event code.
     if ((!m_onActiveWorkspace && !m_pinned) || !acceptsKeyboardFocus()) {
@@ -835,7 +838,9 @@ namespace umbriel {
     // deactivating only that surface can leave another window's focus border on.
     m_server->deactivateViews(this);
 
-    raiseToTop();
+    if (raise) {
+      raiseToTop();
+    }
     if (!scheduledActivated()) {
       setActivatedState(true);
     } else {

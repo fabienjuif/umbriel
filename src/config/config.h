@@ -449,6 +449,8 @@ namespace umbriel {
     // Lets a modal dialog hang on its parent's frame (true, the default) or opens it as an ordinary window (false).
     std::optional<bool> attachToParent;
     std::optional<bool> confinePointer;
+    // Whether matching windows may activate client-requested keyboard shortcut inhibition (true by default).
+    std::optional<bool> allowShortcutsInhibit;
     // Keep a hidden window unsuspended and pace its frame callbacks at its output's refresh rate, for clients whose
     // non-rendering work stalls without them.
     std::optional<bool> backgroundRender;
@@ -517,6 +519,7 @@ namespace umbriel {
           && focusOnActivate == other.focusOnActivate
           && attachToParent == other.attachToParent
           && confinePointer == other.confinePointer
+          && allowShortcutsInhibit == other.allowShortcutsInhibit
           && backgroundRender == other.backgroundRender
           && vrr == other.vrr
           && allowTearing == other.allowTearing
@@ -564,6 +567,7 @@ namespace umbriel {
     std::optional<bool> focusOnActivate;
     std::optional<bool> attachToParent;
     std::optional<bool> confinePointer;
+    std::optional<bool> allowShortcutsInhibit;
     std::optional<bool> backgroundRender;
     std::optional<VrrMode> vrr;
     std::optional<bool> allowTearing;
@@ -1083,7 +1087,7 @@ namespace umbriel {
       // (xdg_toplevel.move), such as a CSD title bar or Chromium tab strip.
       bool clientWindowDrag = true;
       // Preview and apply half or quarter placement while dragging to output edges.
-      bool windowSnapping = false;
+      bool windowSnapping = true;
       // Retarget an interactive window drag with the free mouse button: float
       // it, pin it, or leave the drag alone.
       WindowDragToggle windowDragToggle = WindowDragToggle::None;
@@ -1174,6 +1178,9 @@ namespace umbriel {
       struct Focus {
         bool followsMouse = false;
         std::optional<double> followsMouseMaxScroll;
+        // false narrows hover to focus alone: raising is left to clicks, keybinds, and activation, so sweeping the
+        // pointer across a larger window underneath cannot bury the window above it.
+        bool hoverRaises = true;
         bool operator==(const Focus&) const = default;
       } focus;
 

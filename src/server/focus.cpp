@@ -107,6 +107,10 @@ namespace umbriel {
       view->applyDeferredUnfullscreen();
     }
 
+    // Raise is decided once: only a hover under follows_mouse may focus without lifting the window. Every other
+    // reason (clicks, keybinds, activation, workspace switches, mapping) raises.
+    const bool raise = !(reason == FocusReason::PointerHover && !config().input.focus.hoverRaises);
+    m_lastRaise = raise;
     // Keep workspace focus while exclusive layer-shell holds the seat; refocus applies it later. focus() also returns
     // the seat to a layer that was uncovered by a fullscreen window leaving, and clears the previous window's
     // activation chrome. Overview owns the seat the same way, but keeps the chrome so card borders track the focused
@@ -115,11 +119,11 @@ namespace umbriel {
     if (LayerSurface* layer = exclusiveKeyboardLayer()) {
       layer->focus();
     } else {
-      seatTarget->applySeatFocus(!overviewActive);
+      seatTarget->applySeatFocus(!overviewActive, raise);
     }
     Workspace* workspace = view->workspace();
     if (workspace != nullptr && (!view->pinned() || workspace->active())) {
-      workspace->setFocusedView(view, reason != FocusReason::PointerHover);
+      workspace->setFocusedView(view, raise, reason != FocusReason::PointerHover);
     }
     m_server.refreshOutputPolicies();
     if (overviewActive) {
@@ -245,9 +249,9 @@ namespace umbriel {
 
       // The seat surface is already correct. Refresh only the owner's chrome
       // and stacking so a popup or input grab keeps the exact focused surface.
-      view->applySeatFocus(false);
+      view->applySeatFocus(false, m_lastRaise);
       if (Workspace* workspace = view->workspace(); workspace != nullptr && (!view->pinned() || workspace->active())) {
-        workspace->setFocusedView(view->placementRoot(), false);
+        workspace->setFocusedView(view->placementRoot(), m_lastRaise, false);
       }
       m_server.refreshOutputPolicies();
       return true;
@@ -504,6 +508,45 @@ namespace umbriel {
       *surface = nullptr;
     }
     return view;
+  }
+
+  Workspace* activeWorkspace(Server& server) {
+    Output* output = server.outputFromWlr(server.preferredOutput());
+    if (output == nullptr || output->workspaceGroup() == nullptr) {
+      return nullptr;
+    }
+    return output->workspaceGroup()->active();
+  }
+
+  View* seatFocusedWindow(Server& server) {
+    return View::fromSurface(server.seat()->wlr()->keyboard_state.focused_surface);
+  }
+
+  View* focusedScratchpadWindow(Server& server) {
+    View* view = seatFocusedWindow(server);
+    ScratchpadManager* scratchpad = server.scratchpadManager();
+    return view != nullptr && scratchpad != nullptr && scratchpad->contains(view) ? view : nullptr;
+  }
+
+  bool scratchpadHoldsFocus(Server& server) {
+    if (focusedScratchpadWindow(server) != nullptr) {
+      return true;
+    }
+    ScratchpadManager* scratchpad = server.scratchpadManager();
+    return seatFocusedWindow(server) == nullptr
+        && scratchpad != nullptr
+        && !scratchpad->activeOn(server.outputFromWlr(server.preferredOutput())).empty();
+  }
+
+  View* focusedWindow(Server& server) {
+    if (View* view = seatFocusedWindow(server)) {
+      return view;
+    }
+    if (scratchpadHoldsFocus(server)) {
+      return nullptr;
+    }
+    Workspace* workspace = activeWorkspace(server);
+    return workspace != nullptr ? workspace->focusedView() : nullptr;
   }
 
 } // namespace umbriel

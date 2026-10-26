@@ -417,6 +417,8 @@ namespace umbriel {
     [[nodiscard]] uint32_t keyboardModifiers() const;
     [[nodiscard]] bool keyboardShortcutsInhibited() const;
     bool toggleKeyboardShortcutsInhibit();
+    // Reconcile existing client inhibitors after a window's rule or the user's override changes.
+    void refreshKeyboardShortcutsInhibitors();
     bool handleWheelBind(WheelDirection direction, uint32_t modifiers);
     // Null when no bind matched or its action declined. A throttled bind still
     // returns its chord so the caller can consume the press.
@@ -542,6 +544,7 @@ namespace umbriel {
     static void onNewIdleInhibitor(wl_listener* listener, void* data);
     static void onIdleInhibitorDestroy(wl_listener* listener, void* data);
     static void onNewShortcutsInhibitor(wl_listener* listener, void* data);
+    [[nodiscard]] bool clientShortcutsInhibitAllowed(wlr_surface* surface) const;
     static void onShortcutsInhibitorDestroy(wl_listener* listener, void* data);
     static void onNewImageCopySession(wl_listener* listener, void* data);
     static void onImageCopySessionDestroy(wl_listener* listener, void* data);
@@ -667,6 +670,8 @@ namespace umbriel {
     struct ShortcutsInhibitorWatch {
       Server* server = nullptr;
       wlr_keyboard_shortcuts_inhibitor_v1* inhibitor = nullptr;
+      // Preserve the user's manual deactivation while a rule temporarily prevents client inhibition.
+      bool requestedActive = true;
       wl_listener destroy{};
     };
     struct ImageCopySessionWatch {

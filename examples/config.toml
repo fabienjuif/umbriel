@@ -131,7 +131,7 @@ radius = 3
 # https://docs.noctalia.dev/umbriel/input/
 #
 # [input]
-# window_snapping = false # Drag floating windows to edges or corners for snap previews.
+# window_snapping = false # Drop dragged floating windows where released instead of snapping to edges or corners.
 #
 [input.keyboard]
 numlock_toggle = true
@@ -140,6 +140,7 @@ numlock_toggle = true
 #
 # [input.focus]
 # follows_mouse = true
+# hover_raises = false # Hover focuses only; clicks and keybinds raise.
 
 # Confine touch input to one display.
 #
@@ -314,6 +315,11 @@ default_pinned = true
 # [[window_rule]]
 # match.app_id = "^steam_app_.*$"
 # confine_pointer = true
+
+# Keep compositor shortcuts available while a virtual machine window is focused.
+# [[window_rule]]
+# match.app_id = "^virt-manager$"
+# allow_shortcuts_inhibit = false
 
 # Keep an application drawing while it is hidden on another workspace, for programs whose other work stalls without it.
 # [[window_rule]]

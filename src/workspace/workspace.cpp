@@ -246,7 +246,7 @@ namespace umbriel {
     m_group->server()->scheduleIpcWorkspacesEvent();
   }
 
-  void Workspace::setFocusedView(View* view, bool raise) {
+  void Workspace::setFocusedView(View* view, bool raise, bool settleLayers) {
     if (view == nullptr || view->workspace() == this) {
       if (m_focusedView != view) {
         m_focusedView = view;
@@ -257,15 +257,22 @@ namespace umbriel {
       } else if (!view->pinned()) {
         if (view->floating() && !view->scheduledFullscreen()) {
           m_floatingLayerActive = true;
-        } else if (raise) {
+        } else if (settleLayers) {
           m_floatingLayerActive = false;
         }
       }
-      if (view != nullptr && view->floating()) {
+      if (view != nullptr && view->floating() && raise) {
         std::erase(m_floatingStack, view);
         m_floatingStack.push_back(view);
       }
-      restackFloatingViews();
+      if (raise) {
+        restackFloatingViews();
+      } else {
+        // Focus without raise must not reorder the scene, but the floating layer still follows the layer state
+        // above, or a hover would hide floats a fullscreen window is sitting under.
+        syncFloatingLayer();
+        raiseFloatingLayer();
+      }
       // Whatever focused a tab, a click on its bar, a keybind, activation, or IPC, puts that tab on show.
       m_tabs.focusChanged(view);
     }
@@ -534,7 +541,9 @@ namespace umbriel {
         const wlr_box& geometry = view->geometryBox();
         const int primary = scrollingVertical() ? geometry.height : geometry.width;
         if (primary > 0) {
-          scrolling->setWidthFromPixels(column, scrollViewportExtent(), primary);
+          // A client-chosen first width is one tile and never creates a wide column; wider extents come from
+          // rules, window-set-*, and resize.
+          scrolling->setWidthFromPixels(column, scrollViewportExtent(), std::min(primary, scrollViewportExtent()));
         }
       }
     }
@@ -1933,8 +1942,9 @@ namespace umbriel {
       if (!axis) {
         return false;
       }
-      const double current = presetSnappedFraction(m_layoutConfig.extentPresets, (*axis)[0], (*axis)[1]);
-      return resizeFocusedFloating(nextFractionPreset(m_layoutConfig.extentPresets, current, direction), std::nullopt);
+      const auto presets = boundedPresets(m_layoutConfig.extentPresets, 1.0);
+      const double current = presetSnappedFraction(presets, (*axis)[0], (*axis)[1]);
+      return resizeFocusedFloating(nextFractionPreset(presets, current, direction), std::nullopt);
     }
     if (m_focusedView != nullptr && m_focusedView->maximizedToEdges()) {
       m_focusedView->setMaximizedToEdges(false);
@@ -1955,8 +1965,9 @@ namespace umbriel {
       if (!axis) {
         return false;
       }
-      const double current = presetSnappedFraction(m_layoutConfig.extentPresets, (*axis)[0], (*axis)[1]);
-      return resizeFocusedFloating(std::nullopt, nextFractionPreset(m_layoutConfig.extentPresets, current, direction));
+      const auto presets = boundedPresets(m_layoutConfig.extentPresets, 1.0);
+      const double current = presetSnappedFraction(presets, (*axis)[0], (*axis)[1]);
+      return resizeFocusedFloating(std::nullopt, nextFractionPreset(presets, current, direction));
     }
     if (m_focusedView != nullptr && m_focusedView->maximizedToEdges()) {
       m_focusedView->setMaximizedToEdges(false);
@@ -2032,8 +2043,8 @@ namespace umbriel {
       return false;
     }
     // Clamp here, not in the layouts: ScrollingLayout clamps internally but
-    // DwindleLayout does not, and both must land in [0.1, 1.0].
-    return setFocusedWidth(std::clamp(m_layout->widthFraction(column) + delta, 0.1, 1.0));
+    // DwindleLayout does not, and both must land in [0.1, the layout's ceiling].
+    return setFocusedWidth(std::clamp(m_layout->widthFraction(column) + delta, 0.1, m_layout->maxExtentFraction()));
   }
 
   bool Workspace::modifyFocusedHeight(double delta) {
